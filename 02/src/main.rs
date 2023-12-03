@@ -1,5 +1,6 @@
 use std::fs::File;
 use std::io::prelude::*;
+use core::cmp::max;
 
 type Triplet = (usize,usize,usize);
 type Game = (usize, Vec<Triplet>);
@@ -8,6 +9,12 @@ fn main() -> std::io::Result<()> {
 	let mut file = File::open("input.txt")?;
 	let mut contents = String::new();
 	file.read_to_string(&mut contents)?;
+	star1(contents.as_str());
+	star2(contents.as_str());
+	Ok(())
+}
+
+fn star1(contents: &str) {
 	let mut sum = 0_usize;
 	let truth : Triplet = (12_usize, 13_usize, 14_usize);
 	for line in contents.lines() {
@@ -17,7 +24,16 @@ fn main() -> std::io::Result<()> {
 		}
 	}
 	println!("{sum}");
-	Ok(())
+}
+
+fn star2(contents: &str) {
+	let mut sum = 0_usize;
+	for line in contents.lines() {
+		let g = parse_line(line);
+		let m = g.1.iter().cloned().reduce(|a,e| (max(a.0,e.0),max(a.1,e.1),max(a.2,e.2))).unwrap();
+		sum += m.0*m.1*m.2;
+	}
+	println!("{sum}");
 }
 
 fn parse_line(line: &str) -> Game {
