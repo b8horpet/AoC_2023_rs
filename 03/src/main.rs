@@ -7,9 +7,9 @@ fn main() -> std::io::Result<()> {
     let mut file = File::open("input.txt")?;
     let mut contents = String::new();
     file.read_to_string(&mut contents)?;
-    file.read_to_string(&mut contents)?;
     let mut nums = vec![];
     let mut syms = vec![];
+    let mut stars = vec![];
     for (y, l) in contents.lines().enumerate() {
         nums.push(vec![]);
         syms.push(vec![]);
@@ -32,6 +32,9 @@ fn main() -> std::io::Result<()> {
                 if c != '.' {
                     eprintln!("encountered a symbol '{c}' at ({x},{y})");
                     syms.last_mut().unwrap().push(x);
+                    if c == '*' {
+                        stars.push((y,x));
+                    }
                 }
             }
         }
@@ -45,17 +48,9 @@ fn main() -> std::io::Result<()> {
     let mut sum = 0_usize;
     for (ni,nl) in nums.iter().enumerate() {
         for n in nl {
-            let nb = cmp::max(n.0.0,1_usize)-1_usize;
-            let ne = n.0.1+1_usize;
             let mut found = false;
-            for si in cmp::max(ni, 1_usize)-1 .. cmp::min(ni+2, syms.len()) {
-                if syms[si].binary_search_by(
-                    |s| if (&nb ..= &ne).contains(&s) {Ordering::Equal} else {
-                        if s < &nb {Ordering::Less}
-                        else if &ne < s {Ordering::Greater}
-                             else {unreachable!()}
-                    } 
-                ).is_ok() {
+            for si in cmp::max(ni, 1_usize)-1_usize .. cmp::min(ni+2, syms.len()) {
+                if syms[si].binary_search_by(|s| num_order(&n.0, s)).is_ok() {
                     found = true;
                     break;
                 }
@@ -68,5 +63,53 @@ fn main() -> std::io::Result<()> {
         }
     }
     println!("{sum}");
+    sum = 0_usize;
+    for s in stars {
+        let mut found = vec![];
+        let sx = s.1;
+        for ni in cmp::max(s.0,1_usize)-1_usize .. cmp::min(s.0+2_usize, nums.len()) {
+            if let Ok(n) = nums[ni].binary_search_by(|num| num_order(&num.0, &sx).reverse()) {
+                found.push(nums[ni][n]);
+                assert!(!nums[ni].is_empty());
+                if n > 0 && num_contains(&nums[ni][n-1].0, &sx)
+                {
+                    found.push(nums[ni][n-1]);
+                }
+                if n < nums[ni].len()-1_usize && num_contains(&nums[ni][n+1].0, &sx)
+                {
+                    found.push(nums[ni][n+1]);
+                }
+            }
+        }
+        if found.len() == 2 {
+            sum += found[0].1*found[1].1;
+            eprintln!("star {},{} is surrounded by {} and {}", s.0, s.1, found[0].1, found[1].1);
+        } else {
+            eprintln!("star {},{} is surrounded by {} numbers", s.0, s.1, found.len());
+        }
+    }
+    println!("{sum}");
     Ok(())
+}
+
+fn num_contains(num: &(usize,usize), pos: &usize) -> bool {
+    let nb = cmp::max(num.0,1_usize)-1_usize;
+    let ne = num.1+1_usize;
+    return (nb ..= ne).contains(pos);
+}
+
+fn num_order(num: &(usize,usize), pos: &usize) -> Ordering {
+    let nb = cmp::max(num.0,1_usize)-1_usize;
+    let ne = num.1+1_usize;
+    if (nb ..= ne).contains(pos) {
+        Ordering::Equal
+    } else {
+        if pos < &nb {
+            Ordering::Less
+        } else if &ne < pos {
+            Ordering::Greater
+        } else {
+            unreachable!();
+        }
+    }
 }
